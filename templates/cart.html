@@ -1,0 +1,268 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart - Kumavat Traders{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="cart-container">
+        <h1>Shopping Cart</h1>
+        
+        <div class="cart-content">
+            <div class="cart-items" id="cart-items">
+                <!-- Items will be loaded here -->
+            </div>
+            
+            <div class="cart-summary">
+                <h2>Order Summary</h2>
+                <div class="summary-item">
+                    <span>Subtotal:</span>
+                    <span id="subtotal">₹0.00</span>
+                </div>
+                <div class="summary-item">
+                    <span>Tax (0%):</span>
+                    <span id="tax">₹0.00</span>
+                </div>
+                <div class="summary-item total">
+                    <span>Total:</span>
+                    <span id="total">₹0.00</span>
+                </div>
+                <button class="btn btn-primary btn-checkout" onclick="proceedToCheckout()">
+                    Proceed to Checkout
+                </button>
+                <a href="/" class="btn btn-secondary">Continue Shopping</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .cart-container {
+        max-width: 1000px;
+        margin: 40px auto;
+    }
+
+    .cart-content {
+        display: grid;
+        grid-template-columns: 1fr 300px;
+        gap: 30px;
+        margin-top: 30px;
+    }
+
+    .cart-items {
+        background: white;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+
+    .cart-item {
+        padding: 15px;
+        border-bottom: 1px solid #eee;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .cart-item:last-child {
+        border-bottom: none;
+    }
+
+    .item-details {
+        flex: 1;
+    }
+
+    .item-name {
+        font-weight: bold;
+        margin-bottom: 5px;
+    }
+
+    .item-price {
+        color: #666;
+        font-size: 14px;
+    }
+
+    .item-actions {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .quantity-control {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .quantity-control button {
+        width: 30px;
+        height: 30px;
+        border: 1px solid #ddd;
+        background: white;
+        cursor: pointer;
+        border-radius: 4px;
+    }
+
+    .quantity-control input {
+        width: 40px;
+        text-align: center;
+        border: 1px solid #ddd;
+        padding: 5px;
+    }
+
+    .item-total {
+        font-weight: bold;
+        min-width: 80px;
+        text-align: right;
+    }
+
+    .btn-remove {
+        padding: 5px 10px;
+        background: #e74c3c;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .btn-remove:hover {
+        background: #c0392b;
+    }
+
+    .cart-summary {
+        background: #f9f9f9;
+        padding: 20px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+
+    .cart-summary h2 {
+        margin-top: 0;
+    }
+
+    .summary-item {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        padding: 5px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .summary-item.total {
+        font-weight: bold;
+        font-size: 18px;
+        border-bottom: 2px solid #3498db;
+        border-top: 2px solid #3498db;
+        padding: 10px 0;
+        margin: 15px 0;
+    }
+
+    .btn-checkout {
+        width: 100%;
+        margin-top: 20px;
+    }
+
+    .empty-cart {
+        text-align: center;
+        padding: 40px;
+        color: #999;
+    }
+
+    @media (max-width: 768px) {
+        .cart-content {
+            grid-template-columns: 1fr;
+        }
+
+        .cart-summary {
+            position: static;
+        }
+
+        .item-actions {
+            flex-direction: column;
+            align-items: flex-end;
+        }
+    }
+</style>
+
+<script>
+function loadCart() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const container = document.getElementById('cart-items');
+    
+    if (cart.length === 0) {
+        container.innerHTML = '<div class="empty-cart"><p>Your cart is empty</p><a href="/" class="btn btn-primary">Start Shopping</a></div>';
+        return;
+    }
+    
+    let html = '';
+    let subtotal = 0;
+    
+    cart.forEach((item, index) => {
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        
+        html += `
+            <div class="cart-item">
+                <div class="item-details">
+                    <div class="item-name">${item.name}</div>
+                    <div class="item-price">₹${item.price.toFixed(2)}</div>
+                </div>
+                <div class="item-actions">
+                    <div class="quantity-control">
+                        <button onclick="updateQuantity(${index}, -1)">−</button>
+                        <input type="number" value="${item.quantity}" readonly>
+                        <button onclick="updateQuantity(${index}, 1)">+</button>
+                    </div>
+                    <div class="item-total">₹${itemTotal.toFixed(2)}</div>
+                    <button class="btn-remove" onclick="removeFromCart(${index})">Remove</button>
+                </div>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    updateSummary(subtotal);
+}
+
+function updateQuantity(index, change) {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    cart[index].quantity += change;
+    
+    if (cart[index].quantity <= 0) {
+        cart.splice(index, 1);
+    }
+    
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadCart();
+}
+
+function removeFromCart(index) {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    cart.splice(index, 1);
+    localStorage.setItem('cart', JSON.stringify(cart));
+    loadCart();
+}
+
+function updateSummary(subtotal) {
+    const tax = 0; // You can add tax calculation here
+    const total = subtotal + tax;
+    
+    document.getElementById('subtotal').textContent = `₹${subtotal.toFixed(2)}`;
+    document.getElementById('tax').textContent = `₹${tax.toFixed(2)}`;
+    document.getElementById('total').textContent = `₹${total.toFixed(2)}`;
+}
+
+function proceedToCheckout() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    if (cart.length === 0) {
+        alert('Your cart is empty!');
+        return;
+    }
+    window.location.href = '/checkout';
+}
+
+document.addEventListener('DOMContentLoaded', loadCart);
+</script>
+{% endblock %}

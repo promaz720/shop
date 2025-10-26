@@ -1,0 +1,286 @@
+{% extends "base.html" %}
+
+{% block title %}Checkout - Kumavat Traders{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="checkout-container">
+        <h1>Checkout</h1>
+        
+        <div class="checkout-content">
+            <div class="checkout-form">
+                <h2>Delivery Details</h2>
+                <form id="checkout-form">
+                    <div class="form-group">
+                        <label for="name">Full Name *</label>
+                        <input type="text" id="name" name="name" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="phone">Phone Number *</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+91" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="email">Email Address</label>
+                        <input type="email" id="email" name="email">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="address">Delivery Address *</label>
+                        <textarea id="address" name="address" rows="4" required></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="notes">Special Instructions / Notes</label>
+                        <textarea id="notes" name="notes" rows="3" placeholder="Any special requests or delivery instructions"></textarea>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="order-summary">
+                <h2>Order Summary</h2>
+                <div id="order-items"></div>
+                <div class="summary-divider"></div>
+                <div class="summary-row">
+                    <span>Subtotal:</span>
+                    <span id="summary-subtotal">₹0.00</span>
+                </div>
+                <div class="summary-row">
+                    <span>Tax:</span>
+                    <span id="summary-tax">₹0.00</span>
+                </div>
+                <div class="summary-row total">
+                    <span>Total Amount:</span>
+                    <span id="summary-total">₹0.00</span>
+                </div>
+                
+                <button class="btn btn-primary btn-place-order" onclick="placeOrder()">
+                    Place Order via WhatsApp
+                </button>
+                <a href="/cart" class="btn btn-secondary">Back to Cart</a>
+                
+                <div class="whatsapp-note">
+                    <p>💬 Your order will be sent to: <strong>+91 6376751010</strong></p>
+                    <p>We will contact you shortly to confirm and arrange delivery.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .checkout-container {
+        max-width: 1200px;
+        margin: 40px auto;
+    }
+
+    .checkout-content {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 30px;
+        margin-top: 30px;
+    }
+
+    .checkout-form {
+        background: white;
+        padding: 30px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: bold;
+        color: #333;
+    }
+
+    .form-group input,
+    .form-group textarea {
+        width: 100%;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        font-family: inherit;
+        font-size: 14px;
+    }
+
+    .form-group input:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: #3498db;
+        box-shadow: 0 0 5px rgba(52, 152, 219, 0.3);
+    }
+
+    .order-summary {
+        background: #f9f9f9;
+        padding: 25px;
+        border: 1px solid #ddd;
+        border-radius: 8px;
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+    }
+
+    .order-summary h2 {
+        margin-top: 0;
+    }
+
+    #order-items {
+        margin-bottom: 15px;
+        max-height: 300px;
+        overflow-y: auto;
+    }
+
+    .order-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        font-size: 13px;
+        border-bottom: 1px solid #eee;
+    }
+
+    .summary-divider {
+        border-top: 2px solid #ddd;
+        margin: 15px 0;
+    }
+
+    .summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 8px;
+        font-size: 14px;
+    }
+
+    .summary-row.total {
+        font-weight: bold;
+        font-size: 16px;
+        color: #e74c3c;
+        background: white;
+        padding: 10px;
+        margin: 10px -25px -25px -25px;
+        border-top: 2px solid #3498db;
+    }
+
+    .btn-place-order {
+        width: 100%;
+        margin-top: 20px;
+        background: #27ae60;
+    }
+
+    .btn-place-order:hover {
+        background: #229954;
+    }
+
+    .whatsapp-note {
+        background: #ecf0f1;
+        border-left: 4px solid #27ae60;
+        padding: 12px;
+        margin-top: 20px;
+        border-radius: 4px;
+        font-size: 13px;
+    }
+
+    .whatsapp-note p {
+        margin: 5px 0;
+    }
+
+    @media (max-width: 768px) {
+        .checkout-content {
+            grid-template-columns: 1fr;
+        }
+
+        .order-summary {
+            position: static;
+        }
+    }
+</style>
+
+<script>
+function loadOrderSummary() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    const itemsContainer = document.getElementById('order-items');
+    
+    let subtotal = 0;
+    let html = '';
+    
+    cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        subtotal += itemTotal;
+        html += `
+            <div class="order-item">
+                <span>${item.name} x${item.quantity}</span>
+                <span>₹${itemTotal.toFixed(2)}</span>
+            </div>
+        `;
+    });
+    
+    itemsContainer.innerHTML = html;
+    
+    const tax = 0;
+    const total = subtotal + tax;
+    
+    document.getElementById('summary-subtotal').textContent = `₹${subtotal.toFixed(2)}`;
+    document.getElementById('summary-tax').textContent = `₹${tax.toFixed(2)}`;
+    document.getElementById('summary-total').textContent = `₹${total.toFixed(2)}`;
+}
+
+async function placeOrder() {
+    const cart = JSON.parse(localStorage.getItem('cart') || '[]');
+    
+    if (cart.length === 0) {
+        alert('Your cart is empty!');
+        return;
+    }
+    
+    const form = document.getElementById('checkout-form');
+    if (!form.checkValidity()) {
+        alert('Please fill in all required fields');
+        return;
+    }
+    
+    // Calculate total
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    
+    const orderData = {
+        name: document.getElementById('name').value,
+        phone: document.getElementById('phone').value,
+        email: document.getElementById('email').value,
+        address: document.getElementById('address').value,
+        notes: document.getElementById('notes').value,
+        items: cart,
+        total: total
+    };
+    
+    try {
+        const response = await fetch('/checkout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(orderData)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            localStorage.removeItem('cart');
+            window.location.href = '/';
+        } else {
+            alert('Error placing order: ' + result.error);
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Error placing order. Please try again.');
+    }
+}
+
+document.addEventListener('DOMContentLoaded', loadOrderSummary);
+</script>
+{% endblock %}

@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block title %}Orders - Kumavat Traders{% endblock %}
+
+{% block content %}
+<div class="admin-layout">
+    <aside class="admin-sidebar">
+        <div class="admin-menu">
+            <div class="menu-header">Admin Panel</div>
+            <nav>
+                <a href="/admin/dashboard" class="menu-item">📊 Dashboard</a>
+                <a href="/admin/products" class="menu-item">📦 Manage Products</a>
+                <a href="/admin/orders" class="menu-item active">📋 Orders</a>
+                <a href="/admin/logout" class="menu-item logout">🚪 Logout</a>
+            </nav>
+        </div>
+    </aside>
+
+    <main class="admin-content">
+        <div class="container">
+            <h1>Orders Management</h1>
+            
+            <table class="orders-table">
+                <thead>
+                    <tr>
+                        <th>Order ID</th>
+                        <th>Customer</th>
+                        <th>Phone</th>
+                        <th>Email</th>
+                        <th>Products</th>
+                        <th>Amount</th>
+                        <th>Date</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for order in orders %}
+                    <tr>
+                        <td><strong>#{{ order.id }}</strong></td>
+                        <td>{{ order.customer_name }}</td>
+                        <td><a href="tel:{{ order.customer_phone }}">{{ order.customer_phone }}</a></td>
+                        <td>{{ order.customer_email or '-' }}</td>
+                        <td>
+                            <details>
+                                <summary>View Details</summary>
+                                <pre style="background: #f5f5f5; padding: 10px; margin-top: 10px;">{{ order.products }}</pre>
+                            </details>
+                        </td>
+                        <td><strong>₹{{ "%.2f"|format(order.total_amount) }}</strong></td>
+                        <td>{{ order.order_date.strftime('%d-%m-%Y %H:%M') }}</td>
+                        <td>
+                            <select class="status-select" onchange="updateOrderStatus({{ order.id }}, this.value)">
+                                <option value="pending" {% if order.status == 'pending' %}selected{% endif %}>Pending</option>
+                                <option value="confirmed" {% if order.status == 'confirmed' %}selected{% endif %}>Confirmed</option>
+                                <option value="completed" {% if order.status == 'completed' %}selected{% endif %}>Completed</option>
+                            </select>
+                        </td>
+                        <td>
+                            <button class="btn-view" onclick="viewOrderDetails({{ order.id }}, '{{ order.customer_name }}', '{{ order.customer_phone }}', '{{ order.customer_address }}', '{{ order.products|safe }}', '{{ order.notes }}')">View</button>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" style="text-align: center; padding: 30px; color: #999;">
+                            No orders found
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </main>
+</div>
+
+<!-- Order Details Modal -->
+<div id="order-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close-modal" onclick="closeOrderModal()">&times;</span>
+        <h2>Order Details</h2>
+        <div id="modal-body"></div>
+        <div class="modal-actions">
+            <a id="whatsapp-link" target="_blank" class="btn btn-primary">💬 Send WhatsApp Message</a>
+            <button class="btn btn-secondary" onclick="closeOrderModal()">Close</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .admin-layout {
+        display: grid;
+        grid-template-columns: 250px 1fr;
+        min-height: 100vh;
+        background: #f5f5f5;
+    }
+
+    .admin-sidebar {
+        background: #2c3e50;
+        color: white;
+        padding: 20px 0;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+    }
+
+    .menu-header {
+        padding: 20px;
+        font-weight: bold;
+        font-size: 16px;
+        border-bottom: 1px solid #34495e;
+    }
+
+    .admin-menu nav {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .menu-item {
+        display: block;
+        padding: 12px 20px;
+        color: #ecf0f1;
+        text-decoration: none;
+        transition: background 0.3s;
+        border-left: 3px solid transparent;
+    }
+
+    .menu-item:hover,
+    .menu-item.active {
+        background: #34495e;
+        border-left-color: #3498db;
+    }
+
+    .menu-item.logout {
+        color: #e74c3c;
+    }
+
+    .admin-content {
+        padding: 20px;
+        overflow-y: auto;
+    }
+
+    .orders-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .orders-table thead {
+        background: #2c3e50;
+        color: white;
+    }
+
+    .orders-table th,
+    .orders-table td {
+        padding: 15px;
+        text-align: left;
+        border-bottom: 1px solid #ddd;
+    }
+
+    .orders-table tbody tr:hover {
+        background: #f9f9f9;
+    }
+
+    .status-select {
+        padding: 6px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: pointer;
+    }
+
+    .btn-view {
+        padding: 6px 12px;
+        background: #3498db;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 12px;
+    }
+
+    .btn-view:hover {
+        background: #2980b9;
+    }
+
+    .modal {
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .modal-content {
+        background: white;
+        padding: 30px;
+        border-radius: 8px;
+        max-width: 600px;
+        width: 90%;
+        max-height: 80vh;
+        overflow-y: auto;
+        position: relative;
+    }
+
+    .close-modal {
+        position: absolute;
+        right: 15px;
+        top: 15px;
+        font-size: 28px;
+        cursor: pointer;
+        color: #999;
+    }
+
+    .close-modal:hover {
+        color: #333;
+    }
+
+    .modal-body {
+        margin: 20px 0;
+    }
+
+    .order-detail-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid #eee;
+    }
+
+    .order-detail-row strong {
+        color: #333;
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 20px;
+    }
+
+    .modal-actions .btn {
+        flex: 1;
+    }
+
+    @media (max-width: 768px) {
+        .admin-layout {
+            grid-template-columns: 1fr;
+        }
+
+        .orders-table {
+            font-size: 13px;
+        }
+
+        .orders-table th,
+        .orders-table td {
+            padding: 10px;
+        }
+    }
+</style>
+
+<script>
+function viewOrderDetails(id, name, phone, address, products, notes) {
+    const modalBody = document.getElementById('modal-body');
+    const whatsappLink = document.getElementById('whatsapp-link');
+    
+    modalBody.innerHTML = `
+        <div class="modal-body">
+            <div class="order-detail-row">
+                <strong>Order ID:</strong>
+                <span>#${id}</span>
+            </div>
+            <div class="order-detail-row">
+                <strong>Customer Name:</strong>
+                <span>${name}</span>
+            </div>
+            <div class="order-detail-row">
+                <strong>Phone:</strong>
+                <span>${phone}</span>
+            </div>
+            <div class="order-detail-row">
+                <strong>Address:</strong>
+                <span>${address}</span>
+            </div>
+            <div class="order-detail-row">
+                <strong>Products:</strong>
+                <span><pre>${products}</pre></span>
+            </div>
+            <div class="order-detail-row">
+                <strong>Notes:</strong>
+                <span>${notes || 'N/A'}</span>
+            </div>
+        </div>
+    `;
+    
+    // Set WhatsApp link
+    const message = encodeURIComponent(`Hello ${name},\n\nYour order #${id} has been received!\n\n${products}\n\nWe will arrange delivery soon.\n\nThank you for your order!`);
+    whatsappLink.href = `https://wa.me/916376751010?text=${message}`;
+    
+    document.getElementById('order-modal').style.display = 'flex';
+}
+
+function closeOrderModal() {
+    document.getElementById('order-modal').style.display = 'none';
+}
+
+async function updateOrderStatus(orderId, status) {
+    try {
+        const response = await fetch(`/admin/api/orders/${orderId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: status })
+        });
+        
+        const result = await response.json();
+        if (result.success) {
+            alert('Order status updated!');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+// Close modal when clicking outside
+window.onclick = function(event) {
+    const modal = document.getElementById('order-modal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+</script>
+{% endblock %}
