@@ -21,8 +21,8 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
 db = SQLAlchemy(app)
 
 # Admin credentials (change these in production)
-ADMIN_USERNAME = 'admin'
-ADMIN_PASSWORD = 'admin123'
+ADMIN_USERNAME = 'promax'
+ADMIN_PASSWORD = 'promax@69'
 WHATSAPP_NUMBER = '+916376751010'
 
 # ==================== Helper Functions ====================
